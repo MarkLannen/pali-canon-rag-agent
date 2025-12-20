@@ -1,14 +1,14 @@
-"""Streamlit UI for the Pali Canon RAG Agent."""
+"""Streamlit UI for the Sutta Pitaka RAG Agent."""
 
 import streamlit as st
 
-from src.agent import PaliRAGAgent
+from src.agent import SuttaPitakaRAGAgent
 from src.config import get_default_model
 
 
 # Page configuration
 st.set_page_config(
-    page_title="Pali Canon RAG",
+    page_title="Sutta Pitaka RAG",
     page_icon="📿",
     layout="wide",
 )
@@ -17,7 +17,7 @@ st.set_page_config(
 def init_session_state():
     """Initialize session state variables."""
     if "agent" not in st.session_state:
-        st.session_state.agent = PaliRAGAgent()
+        st.session_state.agent = SuttaPitakaRAGAgent()
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "model_id" not in st.session_state:
@@ -95,10 +95,10 @@ def render_sidebar():
         st.divider()
         st.subheader("About")
         st.markdown("""
-        **Pali Canon RAG Agent**
+        **Sutta Pitaka RAG Agent**
 
-        Ask questions about the Early Buddhist texts
-        from the Pali Canon. Answers include citations
+        Ask questions about the Sutta Pitaka.
+        Answers include inline citations
         to specific sutta passages.
 
         Data source: [SuttaCentral](https://suttacentral.net)
@@ -107,8 +107,8 @@ def render_sidebar():
 
 def render_chat():
     """Render the chat interface."""
-    st.title("Pali Canon RAG Agent 📿")
-    st.caption("Ask questions about the Early Buddhist texts")
+    st.title("Sutta Pitaka RAG Agent 📿")
+    st.caption("Ask questions about the Sutta Pitaka")
 
     # Display chat messages
     for message in st.session_state.messages:
@@ -127,7 +127,7 @@ def render_chat():
                             st.divider()
 
     # Chat input
-    if prompt := st.chat_input("Ask about the Pali Canon..."):
+    if prompt := st.chat_input("Ask about the Sutta Pitaka..."):
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):

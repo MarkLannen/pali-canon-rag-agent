@@ -12,7 +12,7 @@ from ..indexing import VectorStoreManager
 from ..retrieval import RAGQueryEngine
 
 
-class PaliRAGAgent:
+class SuttaPitakaRAGAgent:
     """
     High-level agent interface for querying the Pali Canon.
 
