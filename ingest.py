@@ -161,7 +161,7 @@ Examples:
         vector_store = VectorStoreManager()
         count = vector_store.get_document_count()
         print(f"\nVector store status:")
-        print(f"  Collection: pali_canon")
+        print(f"  Collection: sutta_pitaka")
         print(f"  Document chunks: {count:,}")
         print(f"  Ready: {'Yes' if count > 0 else 'No'}\n")
         return

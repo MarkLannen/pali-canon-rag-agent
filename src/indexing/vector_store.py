@@ -17,7 +17,7 @@ class VectorStoreManager:
 
     def __init__(
         self,
-        collection_name: str = "pali_canon",
+        collection_name: str = "sutta_pitaka",
         persist_dir: Optional[Path] = None,
         embed_model: Optional[str] = None,
     ):
