@@ -22,7 +22,7 @@ class SuttaPitakaRAGAgent:
 
     def __init__(self, model_id: Optional[str] = None):
         """
-        Initialize the Sutta Pitaka RAG Agent.
+        Initialize the Sutta Pitaka AI Agent.
 
         Args:
             model_id: Model ID to use (uses default if None)

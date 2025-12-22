@@ -1,4 +1,4 @@
-"""Streamlit UI for the Sutta Pitaka RAG Agent."""
+"""Streamlit UI for the Sutta Pitaka AI Agent."""
 
 import streamlit as st
 
@@ -95,7 +95,7 @@ def render_sidebar():
         st.divider()
         st.subheader("About")
         st.markdown("""
-        **Sutta Pitaka RAG Agent**
+        **Sutta Pitaka AI Agent**
 
         Ask questions about the Sutta Pitaka.
         Answers include inline citations
@@ -107,7 +107,7 @@ def render_sidebar():
 
 def render_chat():
     """Render the chat interface."""
-    st.title("Sutta Pitaka RAG Agent 📿")
+    st.title("Sutta Pitaka AI Agent 📿")
     st.caption("Ask questions about the Sutta Pitaka")
 
     # Display chat messages

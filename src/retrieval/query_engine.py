@@ -10,7 +10,8 @@ from llama_index.core.response_synthesizers import get_response_synthesizer
 
 from ..config import (
     OLLAMA_BASE_URL,
-    SIMILARITY_TOP_K,
+    SIMILARITY_TOP_K_LOCAL,
+    SIMILARITY_TOP_K_CLOUD,
     ModelConfig,
     get_model,
     get_default_model,
@@ -51,6 +52,13 @@ class RAGResponse:
                 snippet += "..."
             output += f"   \"{snippet}\"\n\n"
         return output
+
+
+def get_top_k_for_model(model_config: ModelConfig) -> int:
+    """Get appropriate top_k based on model type."""
+    if model_config.provider == "ollama":
+        return SIMILARITY_TOP_K_LOCAL
+    return SIMILARITY_TOP_K_CLOUD
 
 
 def create_llm(model_config: ModelConfig) -> LLM:
@@ -126,7 +134,7 @@ Answer using ONLY the suttas provided above:"""
         self,
         vector_store: Optional[VectorStoreManager] = None,
         model_id: Optional[str] = None,
-        top_k: int = SIMILARITY_TOP_K,
+        top_k: Optional[int] = None,
     ):
         """
         Initialize the RAG query engine.
@@ -134,10 +142,9 @@ Answer using ONLY the suttas provided above:"""
         Args:
             vector_store: VectorStoreManager instance (creates new one if None)
             model_id: Model ID from config (uses default if None)
-            top_k: Number of documents to retrieve
+            top_k: Number of documents to retrieve (auto-selected based on model if None)
         """
         self.vector_store = vector_store or VectorStoreManager()
-        self.top_k = top_k
 
         # Get model config
         if model_id:
@@ -146,6 +153,9 @@ Answer using ONLY the suttas provided above:"""
                 raise ValueError(f"Unknown model ID: {model_id}")
         else:
             self.model_config = get_default_model()
+
+        # Set top_k based on model type if not explicitly provided
+        self.top_k = top_k if top_k is not None else get_top_k_for_model(self.model_config)
 
         # Initialize LLM
         self.llm = create_llm(self.model_config)
@@ -189,6 +199,7 @@ Answer using ONLY the suttas provided above:"""
             )
 
         self.model_config = model_config
+        self.top_k = get_top_k_for_model(model_config)
         self.llm = create_llm(model_config)
         self._query_engine = self._create_query_engine()
 

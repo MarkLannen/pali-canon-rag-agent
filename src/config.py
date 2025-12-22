@@ -1,4 +1,4 @@
-"""Configuration settings for Sutta Pitaka RAG Agent."""
+"""Configuration settings for Sutta Pitaka AI Agent."""
 
 import os
 from dataclasses import dataclass
@@ -26,7 +26,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # RAG settings
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
-SIMILARITY_TOP_K = 5
+SIMILARITY_TOP_K_LOCAL = 5   # For local models (limited context handling)
+SIMILARITY_TOP_K_CLOUD = 20  # For cloud models (better context handling)
 
 # SuttaCentral API
 SUTTACENTRAL_API_BASE = "https://suttacentral.net/api"
@@ -113,7 +114,7 @@ MODELS: list[ModelConfig] = [
     ModelConfig(
         id="gemini-flash",
         provider="google",
-        model_id="models/gemini-2.0-flash",
+        model_id="gemini-2.0-flash",
         display_name="Gemini 2.0 Flash",
         description="Fast and capable",
         env_var="GOOGLE_API_KEY",
@@ -121,7 +122,7 @@ MODELS: list[ModelConfig] = [
     ModelConfig(
         id="gemini-pro",
         provider="google",
-        model_id="models/gemini-1.5-pro",
+        model_id="gemini-1.5-pro",
         display_name="Gemini 1.5 Pro",
         description="Most capable Google model",
         env_var="GOOGLE_API_KEY",
