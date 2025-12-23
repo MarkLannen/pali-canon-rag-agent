@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.agent import SuttaPitakaAgent, AgentPhase, AgentProgress
 from src.config import get_default_model
+from src.dictionary import PaliDictionary, PaliTextSearch
 
 
 # Page configuration
@@ -22,6 +23,10 @@ def init_session_state():
         st.session_state.messages = []
     if "model_id" not in st.session_state:
         st.session_state.model_id = get_default_model().id
+    if "pali_dict" not in st.session_state:
+        st.session_state.pali_dict = PaliDictionary()
+    if "pali_search" not in st.session_state:
+        st.session_state.pali_search = PaliTextSearch()
 
 
 def render_sidebar():
@@ -112,9 +117,85 @@ def render_sidebar():
         """)
 
 
+def render_pali_tools():
+    """Render the Pali tools tab."""
+    st.header("Pali Tools 📚")
+
+    tab1, tab2 = st.tabs(["Term Search", "Dictionary"])
+
+    with tab1:
+        st.subheader("Search Pali Terms in Suttas")
+        st.caption("Find how many times a Pali term appears across the suttas")
+
+        pali_term = st.text_input(
+            "Enter Pali term:",
+            placeholder="e.g., nirodha, dukkha, satipaṭṭhāna",
+            key="pali_search_term",
+        )
+
+        if pali_term:
+            with st.spinner("Searching..."):
+                result = st.session_state.pali_search.search(pali_term, limit=50)
+
+            st.success(result.format_summary())
+
+            if result.matches:
+                # Show by sutta
+                st.subheader("Occurrences by Sutta")
+                counts = st.session_state.pali_search.count_occurrences(pali_term)
+                sorted_counts = sorted(counts.items(), key=lambda x: -x[1])
+
+                for sutta_uid, count in sorted_counts[:15]:
+                    st.write(f"**{sutta_uid}**: {count} occurrence{'s' if count != 1 else ''}")
+
+                if len(sorted_counts) > 15:
+                    st.caption(f"... and {len(sorted_counts) - 15} more suttas")
+
+                # Show sample matches
+                with st.expander("View Sample Matches"):
+                    for match in result.matches[:10]:
+                        st.markdown(f"**{match.segment_id}**")
+                        st.text(f"Pali: {match.pali_text[:200]}...")
+                        st.text(f"Eng:  {match.english_text[:200]}...")
+                        st.divider()
+
+    with tab2:
+        st.subheader("Pali-English Dictionary")
+        st.caption("Look up Pali terms and their meanings")
+
+        # Ensure dictionary is loaded
+        if not st.session_state.pali_dict.is_loaded():
+            with st.spinner("Loading dictionary..."):
+                st.session_state.pali_dict.load()
+            st.caption(f"Dictionary loaded: {st.session_state.pali_dict.get_entry_count():,} entries")
+
+        dict_term = st.text_input(
+            "Enter Pali term:",
+            placeholder="e.g., bodhi, nibbāna, saṅkhāra",
+            key="dict_lookup_term",
+        )
+
+        if dict_term:
+            # Try direct lookup first
+            entry = st.session_state.pali_dict.lookup(dict_term)
+
+            if entry:
+                st.markdown(entry.format())
+            else:
+                # Search for similar terms
+                results = st.session_state.pali_dict.search(dict_term, limit=10)
+                if results:
+                    st.warning(f"No exact match for '{dict_term}'. Similar terms:")
+                    for r in results:
+                        with st.expander(r.term):
+                            st.markdown(r.format())
+                else:
+                    st.error(f"No entries found for '{dict_term}'")
+
+
 def render_chat():
     """Render the chat interface."""
-    st.title("Sutta Pitaka AI Agent 📿")
+    st.header("Ask the Agent 🔍")
     st.caption("Ask questions about the Sutta Pitaka")
 
     # Display chat messages
@@ -235,8 +316,21 @@ def render_chat():
 def main():
     """Main application entry point."""
     init_session_state()
+
+    # Main title
+    st.title("Sutta Pitaka AI Agent 📿")
+
+    # Create tabs for main content
+    tab_chat, tab_pali = st.tabs(["💬 Chat", "📚 Pali Tools"])
+
+    with tab_chat:
+        render_chat()
+
+    with tab_pali:
+        render_pali_tools()
+
+    # Render sidebar
     render_sidebar()
-    render_chat()
 
 
 if __name__ == "__main__":
