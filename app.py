@@ -2,13 +2,13 @@
 
 import streamlit as st
 
-from src.agent import SuttaPitakaRAGAgent
+from src.agent import SuttaPitakaAgent, AgentPhase, AgentProgress
 from src.config import get_default_model
 
 
 # Page configuration
 st.set_page_config(
-    page_title="Sutta Pitaka RAG",
+    page_title="Sutta Pitaka AI Agent",
     page_icon="📿",
     layout="wide",
 )
@@ -17,7 +17,7 @@ st.set_page_config(
 def init_session_state():
     """Initialize session state variables."""
     if "agent" not in st.session_state:
-        st.session_state.agent = SuttaPitakaRAGAgent()
+        st.session_state.agent = SuttaPitakaAgent()
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "model_id" not in st.session_state:
@@ -29,7 +29,7 @@ def render_sidebar():
     with st.sidebar:
         st.title("Settings")
 
-        # Model selection - dynamically populated from config
+        # Model selection
         st.subheader("LLM Model")
 
         available_models = st.session_state.agent.get_available_models()
@@ -37,10 +37,7 @@ def render_sidebar():
         if not available_models:
             st.error("No models available. Check Ollama or add API keys.")
         else:
-            # Build options dict: id -> display_name
             model_options = {m.id: m.display_name for m in available_models}
-
-            # Find current selection index
             current_model_id = st.session_state.model_id
             model_ids = list(model_options.keys())
 
@@ -56,7 +53,6 @@ def render_sidebar():
                 index=current_index,
             )
 
-            # Show model description
             current_model = next(
                 (m for m in available_models if m.id == selected_model_id), None
             )
@@ -65,7 +61,6 @@ def render_sidebar():
                 if current_model.is_free:
                     st.caption("💚 Free (runs locally)")
 
-            # Handle model switch
             if selected_model_id != st.session_state.model_id:
                 st.session_state.model_id = selected_model_id
                 try:
@@ -85,6 +80,17 @@ def render_sidebar():
             st.warning("No suttas indexed yet")
             st.info("Run `python ingest.py --nikaya mn` to index suttas")
 
+        # Memory status
+        st.divider()
+        st.subheader("Agent Memory")
+        memory_count = st.session_state.agent.get_memory_count()
+        st.info(f"{memory_count} learned insight{'s' if memory_count != 1 else ''}")
+
+        if memory_count > 0:
+            if st.button("Clear Memory", use_container_width=True):
+                st.session_state.agent.clear_memory()
+                st.rerun()
+
         # Clear chat button
         st.divider()
         if st.button("Clear Chat", use_container_width=True):
@@ -98,8 +104,9 @@ def render_sidebar():
         **Sutta Pitaka AI Agent**
 
         Ask questions about the Sutta Pitaka.
-        Answers include inline citations
-        to specific sutta passages.
+        The agent iteratively searches for
+        comprehensive answers and remembers
+        insights for future queries.
 
         Data source: [SuttaCentral](https://suttacentral.net)
         """)
@@ -115,9 +122,13 @@ def render_chat():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-            # Show sources in expander for assistant messages
-            if message["role"] == "assistant" and "citations" in message:
-                citations = message["citations"]
+            if message["role"] == "assistant":
+                # Show memory indicator
+                if message.get("from_memory"):
+                    st.caption("📚 Recalled from memory")
+
+                # Show sources in expander
+                citations = message.get("citations", [])
                 if citations:
                     with st.expander(f"View Sources ({len(citations)})"):
                         for i, c in enumerate(citations, 1):
@@ -144,36 +155,81 @@ def render_chat():
                     "citations": [],
                 })
             else:
-                model_name = st.session_state.agent.get_current_model().display_name
-                with st.spinner(f"Searching suttas with {model_name}..."):
-                    try:
-                        result = st.session_state.agent.ask(prompt)
-                        st.markdown(result["answer"])
+                # Create progress placeholder
+                progress_placeholder = st.empty()
 
-                        # Show sources
-                        citations = result["citations"]
-                        if citations:
-                            with st.expander(f"View Sources ({len(citations)})"):
-                                for i, c in enumerate(citations, 1):
-                                    st.markdown(f"**{i}. {c['title']}** ({c['sutta_uid']}: {c['segment_range']})")
-                                    st.markdown(f"*Score: {c['score']:.3f}*")
-                                    st.text(c["text"][:500] + "..." if len(c["text"]) > 500 else c["text"])
-                                    st.divider()
+                def update_progress(progress: AgentProgress):
+                    """Update the progress display."""
+                    phase_icons = {
+                        AgentPhase.RECALL: "🧠",
+                        AgentPhase.SEARCH: "🔍",
+                        AgentPhase.ANALYZE: "📊",
+                        AgentPhase.SYNTHESIZE: "✍️",
+                        AgentPhase.LEARN: "💾",
+                        AgentPhase.COMPLETE: "✅",
+                    }
+                    icon = phase_icons.get(progress.phase, "⏳")
 
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": result["answer"],
-                            "citations": citations,
-                        })
+                    if progress.phase == AgentPhase.COMPLETE:
+                        progress_placeholder.empty()
+                    else:
+                        progress_placeholder.info(
+                            f"{icon} {progress.message} "
+                            f"(Step {progress.iteration}/{progress.max_iterations})"
+                        )
 
-                    except Exception as e:
-                        error_msg = f"Error: {str(e)}"
-                        st.error(error_msg)
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": error_msg,
-                            "citations": [],
-                        })
+                # Set up progress callback
+                st.session_state.agent.set_progress_callback(update_progress)
+
+                try:
+                    result = st.session_state.agent.research(prompt)
+
+                    # Clear progress
+                    progress_placeholder.empty()
+
+                    # Show answer
+                    st.markdown(result.answer)
+
+                    # Show memory indicator
+                    if result.from_memory:
+                        st.caption("📚 Recalled from memory")
+
+                    # Show sources
+                    citations = [
+                        {
+                            "sutta_uid": c.sutta_uid,
+                            "segment_range": c.segment_range,
+                            "title": c.title,
+                            "text": c.text_snippet,
+                            "score": c.score,
+                        }
+                        for c in result.citations
+                    ]
+
+                    if citations:
+                        with st.expander(f"View Sources ({len(citations)})"):
+                            for i, c in enumerate(citations, 1):
+                                st.markdown(f"**{i}. {c['title']}** ({c['sutta_uid']}: {c['segment_range']})")
+                                st.markdown(f"*Score: {c['score']:.3f}*")
+                                st.text(c["text"][:500] + "..." if len(c["text"]) > 500 else c["text"])
+                                st.divider()
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": result.answer,
+                        "citations": citations,
+                        "from_memory": result.from_memory,
+                    })
+
+                except Exception as e:
+                    progress_placeholder.empty()
+                    error_msg = f"Error: {str(e)}"
+                    st.error(error_msg)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": error_msg,
+                        "citations": [],
+                    })
 
 
 def main():

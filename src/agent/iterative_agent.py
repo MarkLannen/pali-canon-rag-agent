@@ -11,6 +11,7 @@ from ..config import (
     ModelConfig,
     get_model,
     get_default_model,
+    get_available_models,
     SIMILARITY_TOP_K_CLOUD,
 )
 from ..indexing import VectorStoreManager
@@ -205,6 +206,27 @@ Synthesized Answer:"""
             )
         self.model_config = model_config
         self.llm = create_llm(model_config)
+
+    def set_model(self, model_id: str) -> None:
+        """Alias for switch_model (for compatibility)."""
+        self.switch_model(model_id)
+
+    @staticmethod
+    def get_available_models() -> list[ModelConfig]:
+        """Get all models that have valid credentials configured."""
+        return get_available_models()
+
+    def get_current_model(self) -> ModelConfig:
+        """Get the currently selected model."""
+        return self.model_config
+
+    def is_ready(self) -> bool:
+        """Check if the agent is ready (has indexed documents)."""
+        return self.vector_store.collection_exists()
+
+    def get_document_count(self) -> int:
+        """Get number of indexed document chunks."""
+        return self.vector_store.get_document_count()
 
     def _retrieve(self, query: str, top_k: int) -> list[RetrievedPassage]:
         """Retrieve passages from the vector store."""
