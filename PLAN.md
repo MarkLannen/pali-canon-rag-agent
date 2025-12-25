@@ -12,7 +12,8 @@
 - **Agent Memory** - persists learned insights in `agent_wisdom` collection
 - **Pali Dictionary** - 142K entries from SuttaCentral API
 - **Pali Term Search** - search for Pali terms across cached suttas
-- Streamlit UI with Chat and Pali Tools tabs
+- Streamlit UI with Chat, Search, and Pali Tools tabs
+- **Enhanced Search Mode** - exhaustive search grouped by sutta (no LLM)
 - Multi-model support (Ollama, Anthropic, Google, OpenAI)
 - Dynamic retrieval: 5 chunks for local models, 20 for cloud models
 - Progress indicators during research phases
@@ -28,6 +29,13 @@
    - **4,050 suttas ingested** → **5,763 chunks** in vector store:
      - DN: 34, MN: 152, SN: 1,819, AN: 1,408
      - KN: kp(9), dhp(26), ud(80), iti(112), snp(73), thag(264), thig(73)
+
+2. **Phase 8: Enhanced Search Mode** ✅
+   - Created `src/retrieval/sutta_search.py` - exhaustive search with grouping
+   - Added "Search" tab to UI (between Chat and Pali Tools)
+   - High top_k (200-500) retrieval without LLM synthesis
+   - Results grouped by sutta with relevance scores and snippets
+   - Configurable search depth via UI slider
 
 ### What Was Done (Dec 22)
 1. **Phase 3 & 6: Iterative Agent with Memory** ✅
@@ -136,18 +144,19 @@
 
 ---
 
+### Phase 8: Enhanced Search Mode ✅ DONE
+
+**Files created:** `src/retrieval/sutta_search.py`
+
+- ✅ Exhaustive vector search (high top_k: 200-500)
+- ✅ Returns list of matching suttas without LLM synthesis
+- ✅ Groups results by sutta (not by chunk)
+- ✅ Shows relevance scores and snippet previews
+- ✅ UI: "Search" tab between Chat and Pali Tools
+
+---
+
 ## Remaining Phases
-
-### Phase 8: Search-Only Mode (For Counting Queries)
-
-**Note:** Partially addressed by Pali Term Search, but could be extended for English semantic search.
-
-For questions like "list all suttas about Y":
-
-1. Performs exhaustive vector search (high top_k, e.g., 100-500)
-2. Returns list of matching suttas without LLM synthesis
-3. Groups results by sutta (not by chunk)
-4. Shows relevance scores and snippet previews
 
 ### Phase 10: Additional Dictionaries
 
@@ -188,7 +197,8 @@ sutta-pitaka-ai-agent/
 │   │   ├── progress_tracker.py # Resume capability (NEW)
 │   │   └── processor.py        # Document chunking
 │   └── retrieval/
-│       └── query_engine.py     # Query engine
+│       ├── query_engine.py     # Query engine
+│       └── sutta_search.py     # Exhaustive search with grouping (NEW)
 ├── chroma_db/                  # Vector database
 │   ├── sutta_pitaka/           # Main sutta embeddings
 │   └── agent_wisdom/           # Learned insights
@@ -238,10 +248,9 @@ pkill -f streamlit
 
 ## Next Steps (Priority Order)
 
-### 1. Enhanced Search Mode (Phase 8)
-- Add English semantic search with high top_k
-- Group results by sutta
-- UI toggle for "Research" vs "Search" mode
+### 1. Additional Dictionaries (Phase 10)
+- English-to-Pali dictionary
+- Dictionary of Pali Proper Names (DPPN)
 
 ### 2. Future Enhancements
 - Metadata filtering (by nikaya, topic tags)

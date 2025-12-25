@@ -3,8 +3,9 @@
 import streamlit as st
 
 from src.agent import SuttaPitakaAgent, AgentPhase, AgentProgress
-from src.config import get_default_model
+from src.config import get_default_model, SEARCH_TOP_K_DEFAULT, SEARCH_TOP_K_MAX
 from src.dictionary import PaliDictionary, PaliTextSearch
+from src.retrieval import SuttaSearchEngine
 
 
 # Page configuration
@@ -27,6 +28,8 @@ def init_session_state():
         st.session_state.pali_dict = PaliDictionary()
     if "pali_search" not in st.session_state:
         st.session_state.pali_search = PaliTextSearch()
+    if "sutta_search" not in st.session_state:
+        st.session_state.sutta_search = SuttaSearchEngine()
 
 
 def render_sidebar():
@@ -198,9 +201,66 @@ def render_pali_tools():
                     st.error(f"No entries found for '{dict_term}'")
 
 
+def render_search():
+    """Render the sutta search interface."""
+    st.header("Search Suttas 🔍")
+    st.caption("Find all suttas that mention a topic (no AI synthesis)")
+
+    # Search input
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        query = st.text_input(
+            "Search query:",
+            placeholder="e.g., mindfulness, dependent origination, four noble truths",
+            key="sutta_search_query",
+        )
+    with col2:
+        top_k = st.number_input(
+            "Max results:",
+            min_value=50,
+            max_value=SEARCH_TOP_K_MAX,
+            value=SEARCH_TOP_K_DEFAULT,
+            step=50,
+            key="sutta_search_top_k",
+        )
+
+    if query:
+        with st.spinner(f"Searching {top_k} passages..."):
+            results = st.session_state.sutta_search.search(query, top_k=top_k)
+
+        if results.sutta_count == 0:
+            st.warning("No matching suttas found. Try different search terms.")
+        else:
+            # Summary
+            st.success(f"Found **{results.sutta_count} suttas** ({results.total_chunks} matching passages)")
+
+            # Results grouped by sutta
+            for i, sutta in enumerate(results.results):
+                # Show first 20 without expander, rest in "Show more"
+                if i < 20:
+                    with st.expander(
+                        f"**{sutta.sutta_uid}** - {sutta.title} "
+                        f"(score: {sutta.best_score:.3f}, {sutta.match_count} matches)"
+                    ):
+                        for snippet in sutta.snippets:
+                            st.markdown(f"*{snippet['segment_range']}* (score: {snippet['score']:.3f})")
+                            st.text(snippet["text"])
+                            st.divider()
+
+            # Show remaining results
+            if results.sutta_count > 20:
+                remaining = results.results[20:]
+                with st.expander(f"Show {len(remaining)} more suttas..."):
+                    for sutta in remaining:
+                        st.markdown(
+                            f"**{sutta.sutta_uid}** - {sutta.title} "
+                            f"(score: {sutta.best_score:.3f}, {sutta.match_count} matches)"
+                        )
+
+
 def render_chat():
     """Render the chat interface."""
-    st.header("Ask the Agent 🔍")
+    st.header("Ask the Agent 💬")
     st.caption("Ask questions about the Sutta Pitaka")
 
     # Display chat messages
@@ -326,10 +386,13 @@ def main():
     st.title("Sutta Pitaka AI Agent 📿")
 
     # Create tabs for main content
-    tab_chat, tab_pali = st.tabs(["💬 Chat", "📚 Pali Tools"])
+    tab_chat, tab_search, tab_pali = st.tabs(["💬 Chat", "🔍 Search", "📚 Pali Tools"])
 
     with tab_chat:
         render_chat()
+
+    with tab_search:
+        render_search()
 
     with tab_pali:
         render_pali_tools()

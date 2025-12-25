@@ -29,6 +29,10 @@ CHUNK_OVERLAP = 50
 SIMILARITY_TOP_K_LOCAL = 5   # For local models (limited context handling)
 SIMILARITY_TOP_K_CLOUD = 20  # For cloud models (better context handling)
 
+# Search mode settings (exhaustive search without LLM synthesis)
+SEARCH_TOP_K_DEFAULT = 200   # Default number of chunks to retrieve
+SEARCH_TOP_K_MAX = 500       # Maximum allowed
+
 # SuttaCentral API
 SUTTACENTRAL_API_BASE = "https://suttacentral.net/api"
 REQUEST_DELAY = 0.5  # Seconds between API requests to be polite
