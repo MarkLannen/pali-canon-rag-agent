@@ -4,7 +4,12 @@ import streamlit as st
 
 from src.agent import SuttaPitakaAgent, AgentPhase, AgentProgress
 from src.config import get_default_model, SEARCH_TOP_K_DEFAULT, SEARCH_TOP_K_MAX
-from src.dictionary import PaliDictionary, PaliTextSearch
+from src.dictionary import (
+    PaliDictionary,
+    PaliTextSearch,
+    DPPNDictionary,
+    EnglishToPaliDictionary,
+)
 from src.retrieval import SuttaSearchEngine
 
 
@@ -30,6 +35,10 @@ def init_session_state():
         st.session_state.pali_search = PaliTextSearch()
     if "sutta_search" not in st.session_state:
         st.session_state.sutta_search = SuttaSearchEngine()
+    if "dppn_dict" not in st.session_state:
+        st.session_state.dppn_dict = DPPNDictionary()
+    if "eng_pali_dict" not in st.session_state:
+        st.session_state.eng_pali_dict = EnglishToPaliDictionary()
 
 
 def render_sidebar():
@@ -124,7 +133,12 @@ def render_pali_tools():
     """Render the Pali tools tab."""
     st.header("Pali Tools 📚")
 
-    tab1, tab2 = st.tabs(["Term Search", "Dictionary"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Term Search",
+        "Pali → English",
+        "English → Pali",
+        "Proper Names (DPPN)",
+    ])
 
     with tab1:
         st.subheader("Search Pali Terms in Suttas")
@@ -199,6 +213,98 @@ def render_pali_tools():
                             st.markdown(r.format())
                 else:
                     st.error(f"No entries found for '{dict_term}'")
+
+    with tab3:
+        st.subheader("English-Pali Dictionary")
+        st.caption("Find Pali terms for English words")
+
+        # Ensure dictionary is loaded
+        if not st.session_state.eng_pali_dict.is_loaded():
+            with st.spinner("Building reverse index from Pali dictionary..."):
+                st.session_state.eng_pali_dict.load()
+            st.caption(
+                f"Index built: {st.session_state.eng_pali_dict.get_word_count():,} English words"
+            )
+
+        eng_term = st.text_input(
+            "Enter English word:",
+            placeholder="e.g., suffering, mindfulness, enlightenment",
+            key="eng_pali_lookup_term",
+        )
+
+        if eng_term:
+            # Try direct lookup first
+            entry = st.session_state.eng_pali_dict.lookup(eng_term)
+
+            if entry:
+                st.success(f"Found {len(entry.pali_terms)} Pali terms for '{eng_term}'")
+                for i, item in enumerate(entry.pali_terms, 1):
+                    term = item["term"]
+                    defn = item.get("definition", "")
+                    grammar = item.get("grammar", "")
+
+                    # Clean HTML from definition
+                    import re
+                    clean_defn = re.sub(r'<[^>]+>', '', defn)
+
+                    with st.expander(f"{i}. {term}" + (f" ({grammar})" if grammar else "")):
+                        st.markdown(f"**{term}**")
+                        st.write(clean_defn[:500] if len(clean_defn) > 500 else clean_defn)
+            else:
+                # Search for similar terms
+                results = st.session_state.eng_pali_dict.search(eng_term, limit=10)
+                if results:
+                    st.warning(f"No exact match for '{eng_term}'. Similar words:")
+                    for r in results:
+                        with st.expander(f"{r.english_word} ({len(r.pali_terms)} Pali terms)"):
+                            for item in r.pali_terms[:5]:
+                                st.write(f"• **{item['term']}**")
+                else:
+                    st.error(f"No entries found for '{eng_term}'")
+
+    with tab4:
+        st.subheader("Dictionary of Pali Proper Names (DPPN)")
+        st.caption("Look up people, places, and concepts in the Pali Canon")
+
+        # Ensure dictionary is loaded
+        if not st.session_state.dppn_dict.is_loaded():
+            with st.spinner("Loading DPPN dictionary..."):
+                st.session_state.dppn_dict.load()
+            entry_count = st.session_state.dppn_dict.get_entry_count()
+            types = st.session_state.dppn_dict.get_types()
+            type_summary = ", ".join(f"{k}: {v}" for k, v in sorted(types.items()))
+            st.caption(f"DPPN loaded: {entry_count:,} entries ({type_summary})")
+
+        dppn_term = st.text_input(
+            "Enter name:",
+            placeholder="e.g., Sāriputta, Rājagaha, Vesālī",
+            key="dppn_lookup_term",
+        )
+
+        if dppn_term:
+            # Try direct lookup first
+            entry = st.session_state.dppn_dict.lookup(dppn_term)
+
+            if entry:
+                st.markdown(entry.format())
+
+                # Show sutta references if any
+                refs = entry.get_references()
+                if refs:
+                    with st.expander(f"Sutta References ({len(refs)})"):
+                        for ref in sorted(refs)[:30]:
+                            st.write(f"• [{ref}](https://suttacentral.net/{ref})")
+            else:
+                # Search for similar terms
+                results = st.session_state.dppn_dict.search(dppn_term, limit=10)
+                if results:
+                    st.warning(f"No exact match for '{dppn_term}'. Similar names:")
+                    for r in results:
+                        type_label = f" ({r.entry_type})" if r.entry_type else ""
+                        with st.expander(f"{r.word}{type_label}"):
+                            st.markdown(r.format())
+                else:
+                    st.error(f"No entries found for '{dppn_term}'")
 
 
 def render_search():

@@ -1,6 +1,6 @@
 # Sutta Pitaka AI Agent - Implementation Plan
 
-## Current State (as of Dec 24, 2024)
+## Current State (as of Dec 27, 2024)
 
 ### What's Working
 - ChromaDB vector store with embeddings (**5,763 chunks from 4,050 suttas**)
@@ -11,12 +11,22 @@
 - **Iterative AI Agent** with multi-pass search and gap analysis
 - **Agent Memory** - persists learned insights in `agent_wisdom` collection
 - **Pali Dictionary** - 142K entries from SuttaCentral API
+- **English-to-Pali Dictionary** - reverse index with 36K English words
+- **Dictionary of Pali Proper Names (DPPN)** - 1,367 entries (persons, places, things)
 - **Pali Term Search** - search for Pali terms across cached suttas
 - Streamlit UI with Chat, Search, and Pali Tools tabs
 - **Enhanced Search Mode** - exhaustive search grouped by sutta (no LLM)
 - Multi-model support (Ollama, Anthropic, Google, OpenAI)
 - Dynamic retrieval: 5 chunks for local models, 20 for cloud models
 - Progress indicators during research phases
+
+### What Was Done (Dec 27)
+1. **Phase 10: Additional Dictionaries** ✅
+   - Created `src/dictionary/english_to_pali.py` - reverse index from Pali dictionary
+   - Created `src/dictionary/dppn.py` - Dictionary of Pali Proper Names
+   - Updated Pali Tools UI with 4 tabs: Term Search, Pali→English, English→Pali, DPPN
+   - **36,502 English words** indexed for reverse lookup
+   - **1,367 DPPN entries** (994 persons, 347 places, 26 things)
 
 ### What Was Done (Dec 24)
 1. **Phase 1: Full Sutta Pitaka Ingestion** ✅
@@ -156,17 +166,20 @@
 
 ---
 
-## Remaining Phases
+### Phase 10: Additional Dictionaries ✅ DONE
 
-### Phase 10: Additional Dictionaries
+**Files created:** `src/dictionary/english_to_pali.py`, `src/dictionary/dppn.py`
 
-1. **English-to-Pali Dictionary**
-   - Find an existing English-to-Pali dictionary resource
-   - Integrate into Pali Tools UI
+- ✅ English-to-Pali reverse index (36,502 English words)
+- ✅ DPPN dictionary from SuttaCentral GitHub (1,367 entries)
+- ✅ UI: Pali Tools expanded to 4 tabs
+- ✅ Entry types classified: person, place, thing
 
-2. **Dictionary of Pali Proper Names (DPPN)**
-   - Find and integrate a dictionary of Pali proper names
-   - Useful for looking up people, places, and concepts mentioned in suttas
+---
+
+## All Phases Complete!
+
+The Sutta Pitaka AI Agent now has all planned features implemented.
 
 ---
 
@@ -185,8 +198,10 @@ sutta-pitaka-ai-agent/
 │   │   └── memory.py           # Agent wisdom persistence
 │   ├── dictionary/
 │   │   ├── __init__.py
-│   │   ├── pali_dictionary.py  # Pali-English dictionary
-│   │   └── pali_search.py      # Pali term search
+│   │   ├── pali_dictionary.py    # Pali-English dictionary
+│   │   ├── english_to_pali.py    # English-to-Pali reverse index (NEW)
+│   │   ├── dppn.py               # Dict of Pali Proper Names (NEW)
+│   │   └── pali_search.py        # Pali term search
 │   ├── config.py               # Settings (incl. ALL_NIKAYAS, KN_COLLECTIONS)
 │   ├── indexing/
 │   │   └── vector_store.py     # ChromaDB
@@ -203,9 +218,11 @@ sutta-pitaka-ai-agent/
 │   ├── sutta_pitaka/           # Main sutta embeddings
 │   └── agent_wisdom/           # Learned insights
 └── cache/
-    ├── suttas/                 # Cached sutta JSON files
-    ├── ingestion_progress/     # Progress tracking (NEW)
-    └── pali_dictionary.json    # Cached dictionary
+    ├── suttas/                     # Cached sutta JSON files
+    ├── ingestion_progress/         # Progress tracking
+    ├── pali_dictionary.json        # Pali-English dictionary cache
+    ├── english_to_pali_index.json  # English-to-Pali reverse index (NEW)
+    └── dppn_dictionary.json        # DPPN cache (NEW)
 ```
 
 ---
@@ -246,13 +263,12 @@ pkill -f streamlit
 
 ---
 
-## Next Steps (Priority Order)
+## Future Enhancements (Optional)
 
-### 1. Additional Dictionaries (Phase 10)
-- English-to-Pali dictionary
-- Dictionary of Pali Proper Names (DPPN)
+These are ideas for future development:
 
-### 2. Future Enhancements
-- Metadata filtering (by nikaya, topic tags)
-- Export research results
-- Compare passages across suttas
+1. **Metadata filtering** - Filter search results by nikaya, topic tags
+2. **Export research results** - Save agent responses and citations
+3. **Compare passages** - Side-by-side comparison of parallel suttas
+4. **Pali grammar tools** - Verb conjugation, noun declension lookup
+5. **Sutta bookmarks** - Save and organize favorite passages
